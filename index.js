@@ -72,27 +72,11 @@ const saveNewRecord = async (exportSuccessful) => {
   return res
 }
 
-// =============================================================================
-// IF INCORRECT URL OR VERB USED REFUSE
-const invalidRoutes = (request, response) => {
-  // only accept requests for the actual endpoint
-  if (request.url !== '/') {
-    response.statusCode = 404
-    response.end(`'${request.url}' not handled.`)
-    // only accept POST requests
-  } else if (request.method !== 'POST') {
-    response.statusCode = 405
-    response.end(`Unsupported method '${request.method}', use 'POST'.`)
-  }
-}
-
 const app = express()
 
 // =============================================================================
 // ENDPOINT FOR API
 app.post('/', (request, response) => {
-
-  if (invalidRoutes(request, response)) return
 
   try {
     mongoose.connect(dbConn, {
