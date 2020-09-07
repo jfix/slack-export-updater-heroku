@@ -11,8 +11,10 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.17.1",
+    "got": "^11.6.0",
     "moment": "^2.27.0",
     "mongoose": "^5.10.3",
-    "querystring": "^0.2.0"
+    "querystring": "^0.2.0",
+    "saslprep": "^1.0.3"
   }
 }
