@@ -51,7 +51,7 @@ const checkForExistingRecord = async (date) => {
     }
   })
   const existsAlready = exArr.length
-  console.log(`existsAlready: ${existsAlready}, start: ${_start}, end: ${_end}`)
+  console.log(`existsAlready: ${existsAlready}, start: ${_start}, end: ${_end}, existsAlready: ${existsAlready > 0}`)
   return existsAlready > 0
 }
 
