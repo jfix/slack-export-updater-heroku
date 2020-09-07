@@ -3,7 +3,8 @@ const mongoose = require('mongoose')
 const express = require('express')
 const qs = require('querystring')
 const got = require('got')
-const saslrep = require('saslprep')
+// mongodb will check for this module and throw a warning if not found
+require('saslprep')
 
 // =============================================================================
 // DB CONNECTION DETAILS
@@ -32,12 +33,12 @@ const Export = mongoose.model('Export', exportSchema)
 
 // =============================================================================
 // A BUNCH OF VARIABLES NEEDED IN SEVERAL PLACES
-const today = moment()
-const now = moment()
-let date = today.clone().subtract(1, 'd')
-if (today.day() <= 1 || today.day() > 5) {
-  date = today.clone().day(-2)
-}
+// const today = moment()
+// const now = moment()
+// let date = today.clone().subtract(1, 'd')
+// if (today.day() <= 1 || today.day() > 5) {
+//   date = today.clone().day(-2)
+// }
 let db
 const errMsg = `Really sorry but for some weird reason I couldn't save the export. Please see an administrator with this info:`
 
@@ -92,14 +93,6 @@ app.post('/', (request, response) => {
     db.on('error', (err) => console.log(`connection error: ${err}`))
     db.once('open', async () => {
       console.log(`DB IS OPEN!`)
-      let recordExists = false
-      if (await checkForExistingRecord(date)) {
-        // don't save document if there is already one with the same date
-        console.log(`Not adding document to database (already one with ${date.toDate()} in the db).`)
-        db.close()
-        console.log(`DB IS NOW CLOSED`)
-        recordExists = true
-      }
 
       // get the data from the POST body while there is data
       let body = ''
