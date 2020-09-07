@@ -33,12 +33,6 @@ const Export = mongoose.model('Export', exportSchema)
 
 // =============================================================================
 // A BUNCH OF VARIABLES NEEDED IN SEVERAL PLACES
-// const today = moment()
-// const now = moment()
-// let date = today.clone().subtract(1, 'd')
-// if (today.day() <= 1 || today.day() > 5) {
-//   date = today.clone().day(-2)
-// }
 let db
 const errMsg = `Really sorry but for some weird reason I couldn't save the export. Please see an administrator with this info:`
 
