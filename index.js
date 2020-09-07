@@ -102,6 +102,14 @@ app.post('/', (request, response) => {
 
       // once the request has been received completely
       request.on('end', async () => {
+        const content = qs.parse(body)
+        let payload = {}
+        try {
+          payload = JSON.parse(content.payload)
+        } catch(err) {
+          throw new Error('payload is not JSON')
+        }
+
         // now that the request is finished, quickly reply
         // note we're using the native node http reponse object, not the Express one!
         response.statusCode = 200
@@ -112,8 +120,6 @@ app.post('/', (request, response) => {
             'replace_original': false
         }))
 
-        const content = qs.parse(body)
-        const payload = JSON.parse(content.payload)
         // const payload = {"user": {"id": "TESTUSER"}, "actions": [{"value": "yyyyymmdd-ok"}], 
         // "response_url": "the response url to use to post back to"}
         console.log(`PAYLOAD: ${JSON.stringify(payload)}`)
@@ -167,52 +173,6 @@ app.post('/', (request, response) => {
           console.log(`DB IS NOW CLOSED`)
         }
       }) // request.on('end'....
-
-      // once the request has been received completely
-      // request.on('end', async () => {
-      //   // get the data from the POST body while there is data
-      //   let body = ''
-      //   request.on('data', (data) => {
-      //       console.log('collecting data from request ...')
-      //       body += data
-      //       if (body.length > 1e6) {
-      //           request.connection.destroy()
-      //           db.close()
-      //           console.log(`DB IS NOW CLOSED`)
-      //       }
-      //   })
-      //   const payload = JSON.parse(content.payload)
-      //   // const payload = {"user": {"id": "TESTUSER"}, "actions": [{"value": "ok"}]}
-      //   console.log(`PAYLOAD: ${JSON.stringify(payload)}`)
-
-      //   const exportSuccessful = (payload.actions[0].value === 'ok')
-      //   const userId = payload.user.id
-      //   const responseMsg = exportSuccessful
-      //     ? `Great! :+1: Thanks a lot`
-      //     : `Hmmm, this smells like a PDCA! :wink: Thanks anyway`
-      //   const responseDate = (now.day() <= 1 || now.day() > 5)
-      //     ? 'Friday'
-      //     : 'yesterday'
-
-      //   const resMsg = `${responseMsg} <@${userId}>, ${responseDate}'s export has been successfully recorded. <https://jfix.github.io/export-stats/|Find out more>.`
-
-      //   if (recordExists) {
-      //     response.end(`${responseMsg} <@${userId}>. However, it seems ${responseDate}'s export has already been reported (this may happen when Runkit doesn't respond in time to Slack, but has successfully recorded the export. <https://jfix.github.io/export-stats/|Check here> in case of doubt.`)
-      //     return
-      //   }
-      //   const res = await saveNewRecord(exportSuccessful, date)
-      //   if (res) {
-      //     console.log(`Successfully saved document in database.`)
-      //     response.end(resMsg)
-      //   } else {
-      //     console.log(`Error while saving: ${JSON.stringify(res)}`)
-      //     response.statusCode = 500
-      //     response.end(`${errMsg} ${JSON.stringify(res)}`)
-      //   }
-      //   console.log('Finished interaction, database is not yet closed. Good-bye!')
-      //   db.close()
-      //   console.log(`DB IS NOW CLOSED`)
-      // }) // request.on('end'....
     }) // db open
   } catch (err) {
     console.log(`CATCH: ${JSON.stringify(err)}`)
