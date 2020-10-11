@@ -1,10 +1,13 @@
 const moment = require('moment')
 const mongoose = require('mongoose')
+const MongoClient = require('mongodb').MongoClient
 const express = require('express')
 const qs = require('querystring')
 const got = require('got')
 // mongodb will check for this module and throw a warning if not found
 require('saslprep')
+
+const { getPipeline } = require('./functions.js')
 
 // =============================================================================
 // DB CONNECTION DETAILS
@@ -13,6 +16,7 @@ const dbPwd = process.env.EXPORT_STATS_MONGO_PWD
 const dbHost = process.env.EXPORT_STATS_MONGO_HOST
 const dbPort = process.env.EXPORT_STATS_MONGO_PORT
 const dbDb = process.env.EXPORT_STATS_MONGO_DB
+const dbColl = process.env.EXPORT_STATS_MONGO_COLL
 const dbConn = `mongodb://${dbUser}:${dbPwd}@${dbHost}:${dbPort}/${dbDb}`
 
 // =============================================================================
@@ -76,6 +80,165 @@ const sendResponse = async (url, message) => {
 }
 
 const app = express()
+
+// =============================================================================
+// IGNORE ALL GET REQUESTS EXCEPT UPTIMEBOT
+app.get('/', async (request, response) => {
+    const ua = request.get('user-agent')
+    if (ua.includes('UptimeRobot/2.0')) {
+        console.log(`${new Date()}: Uptimebot says hello!`)
+        await response.set(200)
+    } else {
+        console.log(`${new Date()}: Uh oh, someone else is visiting: ${ua}`)
+    }
+})
+
+// =============================================================================
+// RETURN A STATS OBJECT
+app.get('/stats', async (request, response) => {
+    const client = await MongoClient.connect(dbConn, { 
+        useNewUrlParser: true, 
+        useUnifiedTopology: true 
+    })
+    console.log(`Serving stats now ...`)
+    const dbo = client.db(dbDb)
+    const coll = dbo.collection(dbColl)
+    try {
+        const allTime = await coll.aggregate(getPipeline(1000)).toArray()
+        const month =  await coll.aggregate(getPipeline(30)).toArray()
+        const hundred =  await coll.aggregate(getPipeline(100)).toArray()
+    
+        response.setHeader('Access-Control-Allow-Origin', '*')
+        response.json({
+            'month': month[0],
+            'hundred': hundred[0],
+            'alltime': allTime[0]
+        })
+    }
+    finally {
+        client.close()
+    }
+})
+
+// =============================================================================
+// returns an object of export events, with keys for each year
+app.get("/heatmap", (req, res) => {
+    try {
+        mongoose.connect(dbConn, { useNewUrlParser: true, useUnifiedTopology: true })
+        let docs = {}
+        const db = mongoose.connection
+        db.once('open', async function() {
+            const cursor = Export.find({}).sort({date: 1}).cursor()
+            cursor.on('data', (doc) => {
+                const year = moment(doc.date).year()
+                const obj = { date: doc.date, count: doc.exportSuccessful ? 1 : -1 }
+                if (year in docs) {
+                    docs[year].push(obj)
+                } else {
+                    docs[year] = [obj]
+                }
+            })
+            cursor.on('close', () => {
+                db.close()
+                res.setHeader('Access-Control-Allow-Origin', '*')
+                res.json(docs)
+            })        
+        })
+    } catch(e) {
+        res.status(500).send(e)
+        db.close()
+    }
+})
+
+app.get("/meme", (req, res) => {
+    // 23 pre-generated images, starting at 0
+    const pregeneratedImageUrls = [
+        'https://i.imgflip.com/24alma.jpg', // sad trooper
+        'https://i.imgflip.com/29fva8.jpg', // happy kid: we did it once
+        'https://i.imgflip.com/29fvfj.jpg', // two in a row!
+        'https://i.imgflip.com/29fvi9.jpg', // drei aufeinanderfolgend!
+        'https://i.imgflip.com/29fvko.jpg', // four in a row!
+        'https://i.imgflip.com/29fvn1.jpg', // five in a row?!? wow!
+        'https://i.imgflip.com/29fvq2.jpg', // much six!!
+        'https://i.imgflip.com/29fvt3.jpg', // 7, ca porte bonheur!
+        'https://i.imgflip.com/29fvxn.jpg', // 8! now we're getting somewhere!
+        'https://i.imgflip.com/29fw0j.jpg', // nine neuf neun!
+        'https://i.imgflip.com/29fw3m.jpg', // double-digits! wow!
+        'https://i.imgflip.com/29fw69.jpg', // 11! it's a palindrome!
+        'https://i.imgflip.com/29fw9g.jpg', // 12! where will it end?!
+        'https://i.imgflip.com/29fwda.jpg', // 13?! quick, is it friday?!
+        'https://i.imgflip.com/29fwge.jpg', // 14! we're on a roll!1!
+        'https://i.imgflip.com/29fwqc.jpg', // quinze ?! ebahi !
+        'https://i.imgflip.com/29fwuj.jpg', // sixteen in a row!
+        'https://i.imgflip.com/29fwx2.jpg', // sweet seventeen!
+        'https://i.imgflip.com/29fwzf.jpg', // 18 in a row!
+        'https://i.imgflip.com/29fx2b.jpg', // 19, that's almost 20!
+        'https://i.imgflip.com/29fx5d.jpg', // 20, it's a deja vu!
+        'https://i.imgflip.com/29fx83.jpg',  // 21, now we're entering uncharted territory
+        'https://i.imgflip.com/2ezh3l.jpg', // 22, wtf another palindrom?!
+        'https://i.imgflip.com/2ezhux.jpg', // 23, inoui!
+        'https://i.imgflip.com/2ezhpw.jpg', // 24, vier-und-zwanzig
+        'https://i.imgflip.com/2ezi2g.jpg', // 25, un quart de cent
+        'https://i.imgflip.com/2ezi9b.jpg', // 26, b-r-a-v-o-o-o
+        'https://i.imgflip.com/2ezifv.jpg', // 27, atomic number of cobalt
+        'https://i.imgflip.com/2ezipx.jpg', // 28, 1 + 2 + 3 + 4 + 5 + 6 + 7
+        'https://i.imgflip.com/2eziyb.jpg', // 29, Finistere
+        'https://i.imgflip.com/2ezj8q.jpg' // 30, les mots manquent
+    ]
+    try {
+        mongoose.connect(dbConn, { useNewUrlParser: true, useUnifiedTopology: true })
+        const db = mongoose.connection
+        db.once('open', async function() {
+            const fromDate = (await Export
+                .find({exportSuccessful: false})
+                .sort({date: -1})
+                .limit(1)
+                .cursor()
+                .next()).date
+            const successStreak = await Export
+                .find({exportSuccessful: true, date: { $gte: fromDate }})
+                .countDocuments()
+            db.close()
+            
+            // we have 31 pre-generated images
+            if (successStreak < 31) {
+                res.setHeader('Access-Control-Allow-Origin', '*')
+                res.json({
+                    successStreak, 
+                    url: pregeneratedImageUrls[successStreak] 
+                })
+                return
+            }
+            // here we call the memegenerator
+            // const sadTrooper = 44693428
+            const happyKid = 61544
+            request.post({
+                "method": "POST",
+                "url": "https://api.imgflip.com/caption_image",
+                "form": {
+                    "template_id": happyKid,
+                    "text0": "yes!!!!!",
+                    "text1": `${successStreak} in a row!`,
+                    "username": process.env.IMGFLIP_LOGIN,
+                    "password": process.env.IMGFLIP_PASSWORD
+                }                
+            }, (error, response, body) => {
+                let resObj = {}
+                if (error) {
+                    resObj = {sucessStreak}
+                } else {
+                    const url = JSON.parse(body).data.url.replace(/^http:/, 'https:')
+                    resObj = {successStreak, url}
+                }
+                res.setHeader('Access-Control-Allow-Origin', '*')
+                res.json(resObj)
+            })
+        })
+    } catch(e) {
+        res.status(500).send(e)
+    }    
+})
+
 
 // =============================================================================
 // ENDPOINT FOR API
