@@ -14,10 +14,9 @@ const { getPipeline } = require('./functions.js')
 const dbUser = process.env.EXPORT_STATS_MONGO_USER
 const dbPwd = process.env.EXPORT_STATS_MONGO_PWD
 const dbHost = process.env.EXPORT_STATS_MONGO_HOST
-const dbPort = process.env.EXPORT_STATS_MONGO_PORT
 const dbDb = process.env.EXPORT_STATS_MONGO_DB
 const dbColl = process.env.EXPORT_STATS_MONGO_COLL
-const dbConn = `mongodb://${dbUser}:${dbPwd}@${dbHost}:${dbPort}/${dbDb}`
+const dbConn = `mongodb+srv://${dbUser}:${dbPwd}@${dbHost}/${dbDb}`
 
 // =============================================================================
 // SCHEMA FOR AN EXPORT RECORD
