@@ -4,6 +4,7 @@ const MongoClient = require('mongodb').MongoClient
 const express = require('express')
 const qs = require('querystring')
 const got = require('got')
+const FormData = require('form-data')
 // mongodb will check for this module and throw a warning if not found
 require('saslprep')
 
@@ -183,7 +184,7 @@ const getHeatmap =  (req, res) => {
     }
 }
 
-const getMeme = (req, res) => {
+const getMeme = async (req, res) => {
     // 23 pre-generated images, starting at 0
     const pregeneratedImageUrls = [
         'https://i.imgflip.com/24alma.jpg', // sad trooper
@@ -245,27 +246,24 @@ const getMeme = (req, res) => {
             // here we call the memegenerator
             // const sadTrooper = 44693428
             const happyKid = 61544
-            request.post({
-                "method": "POST",
-                "url": "https://api.imgflip.com/caption_image",
-                "form": {
-                    "template_id": happyKid,
-                    "text0": "yes!!!!!",
-                    "text1": `${successStreak} in a row!`,
-                    "username": process.env.IMGFLIP_LOGIN,
-                    "password": process.env.IMGFLIP_PASSWORD
-                }                
-            }, (error, response, body) => {
-                let resObj = {}
-                if (error) {
-                    resObj = {sucessStreak}
-                } else {
-                    const url = JSON.parse(body).data.url.replace(/^http:/, 'https:')
-                    resObj = {successStreak, url}
-                }
-                res.setHeader('Access-Control-Allow-Origin', '*')
-                res.json(resObj)
-            })
+
+            const form = new FormData()
+            form.append('template_id', happyKid)
+            form.append('text0', "yes!!!!!")
+            form.append('text1', `${successStreak} in a row!`)
+            form.append('username', process.env.IMGFLIP_LOGIN)
+            form.append('password', process.env.IMGFLIP_PASSWORD)
+
+            const response = await got.post("https://api.imgflip.com/caption_image", { body: form })
+            if (!response) {
+                console.log(`ERROR in MEME image generations.`)
+                resObj = { sucessStreak }
+            } else {
+                const url = JSON.parse(response.body).data.url.replace(/^http:/, 'https:')
+                resObj = {successStreak, url}
+            }
+            res.setHeader('Access-Control-Allow-Origin', '*')
+            res.json(resObj)
         })
     } catch(e) {
         res.status(500).send(e)
