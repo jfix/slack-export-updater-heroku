@@ -256,11 +256,11 @@ const getMeme = async (req, res) => {
 
             const response = await got.post("https://api.imgflip.com/caption_image", { body: form })
             if (!response) {
-                console.log(`ERROR in MEME image generations.`)
+                console.log(`ERROR in meme image generation.`)
                 resObj = { successStreak }
             } else {
                 const url = JSON.parse(response.body).data.url.replace(/^http:/, 'https:')
-                resObj = {successStreak, url}
+                resObj = { successStreak, url }
             }
             res.setHeader('Access-Control-Allow-Origin', '*')
             res.json(resObj)
