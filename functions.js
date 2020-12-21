@@ -257,7 +257,7 @@ const getMeme = async (req, res) => {
             const response = await got.post("https://api.imgflip.com/caption_image", { body: form })
             if (!response) {
                 console.log(`ERROR in MEME image generations.`)
-                resObj = { sucessStreak }
+                resObj = { successStreak }
             } else {
                 const url = JSON.parse(response.body).data.url.replace(/^http:/, 'https:')
                 resObj = {successStreak, url}
