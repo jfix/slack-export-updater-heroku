@@ -2,6 +2,7 @@ const express = require('express')
 
 const { 
     getPipeline, 
+    getAllInOne,
     getIndex, 
     getStats,
     getHeatmap, 
@@ -27,6 +28,10 @@ app.get("/heatmap", getHeatmap)
 // =============================================================================
 // returns info to display the meme image
 app.get("/meme", getMeme)
+
+// =============================================================================
+// RETURN STATS, HEATMAP AND MEME DATA AS ONE JSON OBJECT
+app.get('/aio', getAllInOne)
 
 // =============================================================================
 // ENDPOINT FOR API
