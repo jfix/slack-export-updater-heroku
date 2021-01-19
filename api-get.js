@@ -6,6 +6,7 @@ const got = require('got')
 const FormData = require('form-data')
 // mongodb will check for this module and throw a warning if not found
 require('saslprep')
+const { Export } = require('./db.js')
 
 // =============================================================================
 // DB CONNECTION DETAILS
@@ -18,60 +19,48 @@ const dbConn = `mongodb+srv://${dbUser}:${dbPwd}@${dbHost}/${dbDb}`
 
 // =============================================================================
 // A BUNCH OF VARIABLES NEEDED IN SEVERAL PLACES
-let db
-const errMsg = `Really sorry but for some weird reason I couldn't save the export. Please see an administrator with this info:`
-
-// =============================================================================
-// SCHEMA FOR AN EXPORT RECORD
-const Schema = mongoose.Schema
-const exportSchema = new Schema({
-  date: {
-    type: Date,
-    default: Date.now
-  },
-  exportSuccessful: Boolean,
-  month: Number,
-  week: Number,
-  year: Number,
-  weekDay: String
-})
-const Export = mongoose.model('Export', exportSchema)
-
 
 // this function is used by the /stats endpoint to retrieve data
 const getPipeline = (limit) => {
     const year = (new Date()).getFullYear()
 
     return [
-        { $sort: { date: -1 } },
-        { $limit: limit },
+        // sort descending by date (latest date first)
+        { '$sort': { date: -1 } },
+
+        // only take 'limit' entries, i.e. 30 or 100 or 10000
+        { '$limit': limit },
+        
+        // aggregate info on success
         {
-            '$group': {
+            '$group': {   
                 '_id': 'null',
-                // count all documents
-                'total': {
-                    '$sum': 1
+                overallTotal: {
+                    $sum: 1
+                },
+                'overallSuccess': {
+                    '$sum': {
+                    '$cond': [ '$exportSuccessful', 1, 0 ]
+                    }
                 },
                 'currentYearTotal': {
                     '$sum': {
-                        '$cond': { if: { $eq: [ '$year', year ] }, then: 1, else: 0 }
+                        '$cond': [ { '$eq': [ '$year', year ] }, 1, 0 ]
                     }
                 },
-                // count successful exports if 
-                // they have the 'exportSuccessful' property set to true
-                // and date from the current year (right now hard-coded)
-                'success': {
-                   '$sum': {
-                        '$cond': [{
-                            '$and': [
-                                { '$eq': ['$exportSuccessful', true] },
-                                { '$eq': [ '$year', year ] }   
-                            ]
-                            }, 1, 0]
+                'currentYearSuccess': {
+                    '$sum': {
+                    '$cond': [{
+                        '$and': [
+                        '$exportSuccessful',
+                        { '$eq': [ '$year', year ] }   
+                        ]
+                    }, 1, 0]
                     }
-               }
-            }
+                }
+            }    
         },
+
         // remove _id property from output
         {
            '$project': { '_id': false }
@@ -90,23 +79,33 @@ const getIndex = async (request, response) => {
     }
 }
 
+let db
 const getAllInOne = async (request, response) => {
-    const heatmap = await _heatmap()
-    const stats = await _stats()
-    const meme = await _meme()
+    try {
+        mongoose.connect(dbConn, { useNewUrlParser: true, useUnifiedTopology: true })
+        db = mongoose.connection
 
-    if (heatmap && stats && meme) {
-        response.setHeader('Access-Control-Allow-Origin', '*')
-        await response.json({
-            heatmap,
-            stats,
-            meme
-        }).status(200)
-    } else {
-        console.log(`ERROR in ALL-IN-ONE`)
+        const heatmap = await _heatmap(db)
+        const stats = await _stats(db)
+        const meme = await _meme(db)
+
+        if (heatmap && stats && meme) {
+            response.setHeader('Access-Control-Allow-Origin', '*')
+            await response.json({
+                stats,
+                heatmap,
+                meme
+            }).status(200)
+        } else {
+            throw new Error(`one of heatmap, stats or meme or undefined`)
+        }
+    } catch(e) {
+        console.log(`ERROR: ${e}`)
+    } finally {
+        db.close()
     }
 }
-const _stats = async () => {
+const _stats = async (db) => {
     return new Promise( async (resolve, reject) => {
         const client = await MongoClient.connect(dbConn, { 
             useNewUrlParser: true, 
@@ -116,13 +115,14 @@ const _stats = async () => {
             console.log(`Serving _stats now ...`)
             const dbo = client.db(dbDb)
             const coll = dbo.collection(dbColl)
-            const allTime = await coll.aggregate(getPipeline(1000)).toArray()
-            const month =  await coll.aggregate(getPipeline(30)).toArray()
+            const currentYear = await coll.aggregate(getPipeline(10000)).toArray()
+            const thirty =  await coll.aggregate(getPipeline(30)).toArray()
             const hundred =  await coll.aggregate(getPipeline(100)).toArray()
             return resolve({
-                'month': month[0],
+                'currentYear': currentYear[0],
+                'thirty': thirty[0],
                 'hundred': hundred[0],
-                'alltime': allTime[0]
+                'allTime': currentYear[0]
             })
         } catch(e) {
             return reject(`ERROR in _stats: ${e}`)
@@ -132,20 +132,17 @@ const _stats = async () => {
     })
 }
 
-
-const _heatmap = async () => {
+const _heatmap = async (db) => {
     return new Promise( async (resolve, reject) => {
         try {
-            mongoose.connect(dbConn, { useNewUrlParser: true, useUnifiedTopology: true })
             let docs = {}
-            const db = mongoose.connection
             db.once('open', async function() {
                 const cursor = Export.find({}).sort({date: 1}).cursor()
                 cursor.on('data', (doc) => {
                     const year = moment(doc.date).year()
                     const obj = { 
                         date: doc.date, 
-                        count: doc.exportSuccessful ? 1 : -1 
+                        value: doc.exportSuccessful ? 1 : -1 
                     }
                     if (year in docs) {
                         docs[year].push(obj)
@@ -160,12 +157,10 @@ const _heatmap = async () => {
             })
 
         } catch(e) {
-            db.close()
             return reject(`ERROR in _heatmap: ${e}`)
         }
     })
 }
-
 
 const _meme = async () => {
     return new Promise( async (resolve, reject) => {
