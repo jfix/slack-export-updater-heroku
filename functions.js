@@ -427,11 +427,12 @@ const postExport =  (request, response) => {
         }) // db open
     } catch (err) {
         console.log(`CATCH: ${JSON.stringify(err)}`)
-        db.close()
-        console.log(`DB IS NOW CLOSED`)
         return (err) => response.status(500).json({
             error: err
         })
+    } finally {
+        db.close()
+        console.log(`DB IS NOW CLOSED`)
     }
 }
 
