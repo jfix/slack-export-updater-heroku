@@ -37,6 +37,6 @@ app.get('/aio', getAllInOne)
 // ENDPOINT FOR API
 app.post('/', postExport);
 
-app.listen(3000, () => {
+app.listen(process.env.PORT || 3000, () => {
   console.log('REPL.IT HTTP Express server started');
 });
