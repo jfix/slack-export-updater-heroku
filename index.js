@@ -38,5 +38,5 @@ app.get('/aio', getAllInOne)
 app.post('/', postExport);
 
 app.listen(process.env.PORT || 3000, () => {
-  console.log('REPL.IT HTTP Express server started');
+  console.log('Heroku ExpressJS HTTP Express server started');
 });
