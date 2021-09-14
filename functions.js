@@ -358,6 +358,8 @@ const postExport =  (request, response) => {
                 try {
                     payload = JSON.parse(content.payload)
                 } catch(err) {
+                    db.close()
+                    console.log(`DB IS NOW CLOSED`)            
                     throw new Error('payload is not JSON')
                 }
 
@@ -366,7 +368,7 @@ const postExport =  (request, response) => {
                 response.statusCode = 200
                 response.setHeader('Content-Type', 'application/json')
                 await response.end(JSON.stringify({
-                    'text': '_OK, will go ahead and wake Repl.it. Sit tight!_ :wink:',
+                    'text': '_OK, will go ahead and talk to Heroku. Sit tight!_ :wink:',
                     'response_type': 'ephemeral',
                     'replace_original': false
                 }))
@@ -427,12 +429,11 @@ const postExport =  (request, response) => {
         }) // db open
     } catch (err) {
         console.log(`CATCH: ${JSON.stringify(err)}`)
+        db.close()
+        console.log(`DB IS NOW CLOSED`)
         return (err) => response.status(500).json({
             error: err
         })
-    } finally {
-        db.close()
-        console.log(`DB IS NOW CLOSED`)
     }
 }
 
