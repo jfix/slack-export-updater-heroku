@@ -156,7 +156,7 @@ const _stats = async () => {
             console.log(`Serving _stats now ...`)
             const dbo = client.db(dbDb)
             const coll = dbo.collection(dbColl)
-            const allTime = await coll.aggregate(getPipeline(1000)).toArray()
+            const allTime = await coll.aggregate(getPipeline(2000)).toArray()
             const month =  await coll.aggregate(getPipeline(30)).toArray()
             const hundred =  await coll.aggregate(getPipeline(100)).toArray()
             return resolve({
@@ -198,7 +198,7 @@ const _heatmap = async () => {
                     const year = moment(doc.date).year()
                     const obj = { 
                         date: doc.date, 
-                        count: doc.exportSuccessful ? 1 : -1 
+                        value: doc.exportSuccessful ? 1 : -1 
                     }
                     if (year in docs) {
                         docs[year].push(obj)
