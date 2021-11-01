@@ -97,7 +97,7 @@ const postExport =  (request, response) => {
                 response.statusCode = 200
                 response.setHeader('Content-Type', 'application/json')
                 await response.end(JSON.stringify({
-                    'text': '_OK, will go ahead and wake Repl.it. Sit tight!_ :wink:',
+                    'text': '_OK, will go ahead and wake Heroku. This won\'t take long!_ :wink:',
                     'response_type': 'ephemeral',
                     'replace_original': false
                 }))
